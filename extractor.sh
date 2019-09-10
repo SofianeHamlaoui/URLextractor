@@ -13,7 +13,6 @@ location="$( cd "$(dirname "$0")" ; pwd -P )"
 source $location/config.sh
 
 if [[ $FIRST_TIME = "YES" ]]; then
-	for APP in $(cat $location/requirements); do pacman -S $APP; done
 	sed -i '10s/YES/NO/' $location/config.sh
 	clear
 fi
