@@ -9,12 +9,12 @@ erase_temp_files(){
 trap erase_temp_files SIGINT
 
 clear
-
-source config.sh
+location="$( cd "$(dirname "$0")" ; pwd -P )"
+source $location/config.sh
 
 if [[ $FIRST_TIME = "YES" ]]; then
-	for APP in $(cat requirements); do sudo apt-get install $APP; done
-	sed -i '10s/YES/NO/' config.sh
+	for APP in $(cat $location/requirements); do pacman -S $APP; done
+	sed -i '10s/YES/NO/' $location/config.sh
 	clear
 fi
 
@@ -89,12 +89,12 @@ else
         GEOIP=$(curl -A $CURL_UA --silent --connect-timeout $CURL_TIMEOUT http://ip-api.com/csv/$TARGET_HOST)
         TARGET_IP=$(echo $GEOIP | cut -d',' -f1 | cut -d '"' -f2)
 
-	LOG_IP=`cat log.csv | cut -d',' -f2 | grep $TARGET_IP | wc -l | sed -e 's/^[ \t]*//'`
+	LOG_IP=`cat $location/log.csv | cut -d',' -f2 | grep $TARGET_IP | wc -l | sed -e 's/^[ \t]*//'`
         if [[ $LOG_IP -ge 1 ]]; then
                 echo "[*] Same IP $TARGET_IP was previously analyzed $LOG_IP time(s)"
         fi
 
-        LOG_TARGET=`cat log.csv | cut -d',' -f3 | grep $TARGET | wc -l | sed -e 's/^[ \t]*//'`
+        LOG_TARGET=`cat $location/log.csv | cut -d',' -f3 | grep $TARGET | wc -l | sed -e 's/^[ \t]*//'`
         if [[ $LOG_TARGET -ge 1 ]]; then
                 echo "[*] Same target $TARGET was previously analyzed $LOG_TARGET time(s)"
         fi
@@ -165,11 +165,11 @@ else
 	TARGET_DOMAIN=$(tldextract $TARGET_HOST | rev | cut -d' ' -f1-2 | rev | sed 's/ /./g')
 
 	echo "[INFO] DNS enumeration:"
-	for DOMAIN_ENUM in $(cat domain_enum)
+	for $location/domain_enum in $(cat $location/domain_enum)
 	do
-		DOMAIN_ENUMTEST=$(dig +short $DOMAIN_ENUM.$TARGET_DOMAIN | xargs)
-		if [[ $DOMAIN_ENUMTEST != "" ]]; then
-		echo -e "[*] $DOMAIN_ENUM.$TARGET_DOMAIN \t $DOMAIN_ENUMTEST"
+		$location/domain_enumTEST=$(dig +short $$location/domain_enum.$TARGET_DOMAIN | xargs)
+		if [[ $$location/domain_enumTEST != "" ]]; then
+		echo -e "[*] $$location/domain_enum.$TARGET_DOMAIN \t $$location/domain_enumTEST"
 		fi
 	done
 	fi
@@ -231,7 +231,7 @@ else
 
         echo "[INFO] Starting FUZZing in http://$TARGET_HOST/FUzZzZzZzZz..."
         echo -e "[INFO] Status code \t Folders "
-        cat fuzz | head -$FUZZ_LIMIT | while read DIR
+        cat $location/fuzz | head -$FUZZ_LIMIT | while read DIR
         do
                 FUZZ_CODE=`curl -L -A $CURL_UA --write-out "%{http_code}\n" --silent --connect-timeout $CURL_TIMEOUT --output /dev/null "http://$TARGET_HOST/$DIR"`
                 if [[ $FUZZ_CODE =~ ^2 ]] || [[ $FUZZ_CODE =~ ^3 ]]; then
@@ -247,7 +247,7 @@ else
         if [[ $PASS1 != "" ]] || [[ $PASS2 != "" ]] || [[ $PASS3 != "" ]]; then
                 echo "[ALERT] Look in the source code. It may contain passwords"
         else
-                echo "[INFO] NO passwords found in source code" 
+                echo "[INFO] NO passwords found in source code"
         fi
 
         WWW_CHECK=$(echo $TARGET_HOST | grep -o www)
@@ -305,7 +305,7 @@ else
         if [[ $URLVOID_KEY != "" ]]; then
                 echo "[INFO] URLvoid API information:"
                 curl -L -A $CURL_UA --silent --connect-timeout $CURL_TIMEOUT http://api.urlvoid.com/api1000/$URLVOID_KEY/host/$TARGET_DOMAIN/ > $TARGET_DOMAIN.xml
-                IFS=$'\n' && for URL_VOID_F in $(cat xml_fields)
+                IFS=$'\n' && for URL_VOID_F in $(cat $location/xml_fields)
                 do
                         URL_VOID_F1=$(echo $URL_VOID_F | cut -d',' -f1)
                         URL_VOID_F2=$(echo $URL_VOID_F | cut -d',' -f2)
@@ -321,7 +321,7 @@ else
 
         if [[ $OPEN_TARGET_URLS != "NO" ]]; then
                 COUNT=1
-                cat URLs_$TARGET_HOST.txt | cut -d' ' -f2 | while read URL 
+                cat URLs_$TARGET_HOST.txt | cut -d' ' -f2 | while read URL
                 do
                         if [[ $COUNT -le 1 ]]; then
                                 COUNT=$((COUNT+1))
@@ -337,7 +337,7 @@ else
 
         if [[ $OPEN_EXTERNAL_LINKS != "NO" ]]; then
                 COUNT=1
-                cat URLsExternal$TARGET_HOST.txt | cut -d' ' -f2 | while read URL 
+                cat URLsExternal$TARGET_HOST.txt | cut -d' ' -f2 | while read URL
                 do
                         if [[ $COUNT -le 1 ]]; then
                                 COUNT=$((COUNT+1))
@@ -409,7 +409,7 @@ else
         done
 
         echo "[INFO] Total Sites Linking In:"
-        IFS=$'\n' && for ALEXA_LINKING in $(lynx -dump -force_html -nolist -accept_all_cookies -width=160 "http://www.alexa.com/siteinfo/$TARGET_HOST" | grep -A9 'Total Sites Linking In' | sed -e 's/^[ \t]*//' | grep -o '[0-9].*\..*' | awk '{print$2,$3}' | head -5 | column -t) 
+        IFS=$'\n' && for ALEXA_LINKING in $(lynx -dump -force_html -nolist -accept_all_cookies -width=160 "http://www.alexa.com/siteinfo/$TARGET_HOST" | grep -A9 'Total Sites Linking In' | sed -e 's/^[ \t]*//' | grep -o '[0-9].*\..*' | awk '{print$2,$3}' | head -5 | column -t)
         do
                 echo [*] $ALEXA_LINKING
         done
@@ -440,7 +440,7 @@ else
 
         rm -f URLs_$TARGET_HOST.txt $TARGET_DOMAIN.xml URLsExternal$TARGET_HOST.txt
 
-	echo -e "`date +"%H:%M:%S %d/%m/%Y"`,$TARGET_IP,$TARGET" >> log.csv
+	echo -e "`date +"%H:%M:%S %d/%m/%Y"`,$TARGET_IP,$TARGET" >> $location/log.csv
 
         date '+[INFO] Date: %d/%m/%y | Time: %H:%M:%S'
         date_end=$(date +"%s")
